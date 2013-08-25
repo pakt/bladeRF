@@ -16,7 +16,7 @@ proc compile_nuand { root } {
     vcom -work nuand -2008 [file join $root ./synthesis/lms6002d/vhdl/lms6002d.vhd]
 
     vcom -work nuand -2008 [file join $root ./simulation/util.vhd]
-#    vcom -work nuand -2008 [file join $root ./simulation/fx3_model.vhd]
+    vcom -work nuand -2008 [file join $root ./simulation/fx3_model.vhd]
     vcom -work nuand -2008 [file join $root ./simulation/lms6002d_model.vhd]
     vcom -work nuand -2008 [file join $root ./simulation/sample_stream_tb.vhd]
 }
