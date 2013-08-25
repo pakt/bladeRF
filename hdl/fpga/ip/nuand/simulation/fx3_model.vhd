@@ -41,6 +41,9 @@ architecture dma of fx3_model is
 
 begin
 
+    -- DCLK which isn't used
+    fx3_ctl(9) <= '0' ;
+
     -- Create a 100MHz clock output
     fx3_pclk <= not fx3_pclk after PCLK_HALF_PERIOD ;
 
@@ -53,24 +56,26 @@ begin
     begin
         dma0_rx_reqx <= '1' ;
         dma1_rx_reqx <= '1' ;
-        wait until system_reset = '0' ;
+        dma_rx_enable <= '0' ;
+        wait until rising_edge(fx3_pclk) and system_reset = '0' ;
         for i in 1 to 10 loop
             wait until rising_edge( fx3_pclk ) ;
         end loop ;
         dma_rx_enable <= '1' ;
         while true loop
-            if( dma0_rx_reqx = '1' ) then
-                dma0_rx_reqx <= '0' after 10 us ;
-                dma1_rx_reqx <= '0' after 10 us ;
-                while true loop
-                    if( dma0_rx_ack = '1' ) then
-                        exit ;
-                    elsif( dma1_rx_ack = '1' ) then
-                        exit ;
-                    end if ;
-                end loop ;
-            end if ;
+            dma0_rx_reqx <= '0' after 10 us ;
+            dma1_rx_reqx <= '0' after 10 us ;
+            while true loop
+                if( dma0_rx_ack = '1' ) then
+                    exit ;
+                elsif( dma1_rx_ack = '1' ) then
+                    exit ;
+                end if ;
+                wait ;
+            end loop ;
         end loop ;
+        report "Done with RX sample stream" ;
+        wait ;
     end process ;
 
     tx_sample_stream : process
@@ -79,19 +84,27 @@ begin
     begin
         dma2_tx_reqx <= '1' ;
         dma3_tx_reqx <= '1' ;
+        dma_tx_enable <= '0' ;
+        wait until system_reset = '0' ;
         for i in 0 to 10 loop
             wait until rising_edge( fx3_pclk ) ;
         end loop ;
+        dma_tx_enable <= '1' ;
         while true loop
             wait until rising_edge( fx3_pclk ) ;
        end loop ;
+       report "Done with TX sample stream" ;
+       wait ;
     end process ;
 
     reset_system : process
     begin
         system_reset <= '1' ;
+        dma_idle <= '0' ;
         nop( fx3_pclk, 100 ) ;
         system_reset <= '0' ;
+        nop( fx3_pclk, 10 ) ;
+        dma_idle <= '1' ;
         wait ;
     end process ;
 

@@ -44,7 +44,7 @@ begin
     oc_i2c_scl_pad_o <= '0' ;
     oc_i2c_scl_padoen_o <= '1' ;
     oc_i2c_sda_pad_o <= '0' ;
-    oc_i2c_scl_padoen_o <= '1' ;
+    oc_i2c_sda_padoen_o <= '1' ;
 
     handle_gpio : process
     begin

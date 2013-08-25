@@ -31,9 +31,9 @@ architecture hosted_bladerf of bladerf is
       );
     end component nios_system;
 
-    signal ramp_out : signed(11 downto 0) ;
+    -- signal ramp_out : signed(11 downto 0) ;
 
-    signal lms_tx_clock :   std_logic ;
+    -- signal lms_tx_clock :   std_logic ;
 
     signal \38.4MHz\    :   std_logic ;
     signal \76.8MHz\    :   std_logic ;
@@ -42,12 +42,12 @@ architecture hosted_bladerf of bladerf is
     signal rs232_clock  :   std_logic ;
     signal rs232_locked :   std_logic ;
 
-    signal sfifo_din    :   std_logic_vector(7 downto 0) ;
-    signal sfifo_dout   :   std_logic_vector(7 downto 0) ;
-    signal sfifo_full   :   std_logic ;
-    signal sfifo_empty  :   std_logic ;
-    signal sfifo_re     :   std_logic ;
-    signal sfifo_we     :   std_logic ;
+--    signal sfifo_din    :   std_logic_vector(7 downto 0) ;
+--    signal sfifo_dout   :   std_logic_vector(7 downto 0) ;
+--    signal sfifo_full   :   std_logic ;
+--    signal sfifo_empty  :   std_logic ;
+--    signal sfifo_re     :   std_logic ;
+--    signal sfifo_we     :   std_logic ;
 
     attribute noprune : boolean ;
 
@@ -57,25 +57,25 @@ architecture hosted_bladerf of bladerf is
     attribute noprune of rx_i : signal is true ;
     attribute noprune of rx_q : signal is true ;
 
-    signal fsk_real     : signed(15 downto 0) ;
-    signal fsk_imag     : signed(15 downto 0) ;
-    signal fsk_valid    : std_logic ;
+--    signal fsk_real     : signed(15 downto 0) ;
+--    signal fsk_imag     : signed(15 downto 0) ;
+--    signal fsk_valid    : std_logic ;
 
-    attribute noprune of fsk_real : signal is true ;
-    attribute noprune of fsk_imag : signal is true ;
+--    attribute noprune of fsk_real : signal is true ;
+--    attribute noprune of fsk_imag : signal is true ;
 
-    signal nios_uart_txd : std_logic ;
-    signal nios_uart_rxd : std_logic ;
+--    signal nios_uart_txd : std_logic ;
+--    signal nios_uart_rxd : std_logic ;
 
     signal nios_gpio     : std_logic_vector(31 downto 0) ;
 
-    attribute noprune of nios_uart_txd : signal is true ;
-    attribute noprune of nios_uart_rxd : signal is true ;
+--    attribute noprune of nios_uart_txd : signal is true ;
+--    attribute noprune of nios_uart_rxd : signal is true ;
 
-    signal demod_in_i   : signed(15 downto 0) ;
-    signal demod_in_q   : signed(15 downto 0) ;
-    signal demod_ssd    : signed(15 downto 0) ;
-    signal demod_valid  : std_logic ;
+--    signal demod_in_i   : signed(15 downto 0) ;
+--    signal demod_in_q   : signed(15 downto 0) ;
+--    signal demod_ssd    : signed(15 downto 0) ;
+--    signal demod_valid  : std_logic ;
 
     signal qualifier : unsigned(5 downto 0) := (others =>'0') ;
     attribute noprune of qualifier : signal is true ;
@@ -88,7 +88,7 @@ architecture hosted_bladerf of bladerf is
     signal i2c_sda_out : std_logic ;
     signal i2c_sda_oen : std_logic ;
 
-    signal gpif_var            : std_logic_vector(31 downto 0) ;
+--    signal gpif_var            : std_logic_vector(31 downto 0) ;
 
     signal rf_fifo_rcnt : signed(12 downto 0);
 
@@ -110,7 +110,7 @@ architecture hosted_bladerf of bladerf is
     --- RF tx FIFO signals
     signal rf_tx_fifo_clr    : std_logic;
     signal rf_tx_fifo_data   : std_logic_vector(31 downto 0);
-    signal rf_tx_fifo_read   : std_logic;
+--    signal rf_tx_fifo_read   : std_logic;
     signal rf_tx_fifo_w      : std_logic;
     signal rf_tx_fifo_q      : std_logic_vector(31 downto 0);
     signal rf_tx_fifo_empty  : std_logic;
@@ -215,6 +215,9 @@ architecture hosted_bladerf of bladerf is
 begin
 
     qualifier <= qualifier + 1 when rising_edge(\38.4MHz\) ;
+
+    mini_exp1 <= 'Z' ;
+    mini_exp2 <= 'Z' ;
 
     rx_i <= lms_rx_data when rising_edge(lms_rx_clock_out) and lms_rx_iq_select = '0' ;
     rx_q <= lms_rx_data when rising_edge(lms_rx_clock_out) and lms_rx_iq_select = '1' ;
@@ -569,7 +572,7 @@ begin
     i2c_scl_in <= si_scl ;
     i2c_sda_in <= si_sda ;
 
-    nios_uart_rxd <= demod_ssd(demod_ssd'high) when demod_valid = '1' ;
+--    nios_uart_rxd <= demod_ssd(demod_ssd'high) when demod_valid = '1' ;
 
     toggle_led1 : process(fx3_pclk)
         variable count : natural range 0 to 100_000_000 := 100_000_000 ;
