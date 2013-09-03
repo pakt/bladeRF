@@ -867,7 +867,18 @@ int bladerf_dac_write(struct bladerf *dev, uint16_t val)
 /*------------------------------------------------------------------------------
  * DC Calibration routines
  *----------------------------------------------------------------------------*/
- int bladerf_calibrate_dc(struct bladerf *dev, bladerf_cal_module module)
- {
+int bladerf_calibrate_dc(struct bladerf *dev, bladerf_cal_module module)
+{
     return lms_calibrate_dc(dev, module);
- }
+}
+
+int bladerf_set_dc_correction(struct bladerf *dev, bladerf_module module, int dc_i, int dc_q)
+{
+    return lms_set_dc_correction(dev, module, dc_i, dc_q);
+}
+
+int bladerf_get_dc_correction(struct bladerf *dev, bladerf_module module, int *dc_i, int *dc_q)
+{
+    return lms_get_dc_correction(dev, module, dc_i, dc_q);
+}
+

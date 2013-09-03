@@ -1082,6 +1082,46 @@ API_EXPORT int bladerf_dac_write(struct bladerf *dev, uint16_t val);
  */
 API_EXPORT int bladerf_calibrate_dc(struct bladerf *dev, bladerf_cal_module module);
 
+/**
+ * Set DC correction for RX or TX.
+ *
+ * For RX, the DC offset is given as a 7 bit number where:
+ *
+ * The value passed in is the value that is being seen as the DC component
+ * of the received signal, or some scaling factor therein.  Note that
+ * the actual count value this changes depends on how much gain is in the
+ * system.
+ *
+ * For TX, the DC offset is given as an offset binary number in
+ * increments of 0.0625mV such that the encodings have the following mapping:
+ *
+ *  00000000    -16mV
+ *  10000000    0mV (default)
+ *  11111111    15.9375mV
+ *
+ *  @param  dev     Device Handle
+ *  @param  module  Module to apply correction
+ *  @param  dc_i    DC offset for the I channel
+ *  @param  dc_q    DC offset for the Q channel
+ *
+ *  @return 0 on success, value from \ref RETCODES list on failure
+ */
+API_EXPORT int bladerf_set_dc_correction(struct bladerf *dev, bladerf_module module, int dc_i, int dc_q);
+
+/**
+ * Get DC correction for RX or TX.
+ *
+ * For a description of the encodings, please see \ref bladerf_set_dc_correction.
+ *
+ * @param   dev     Device Handle
+ * @param   module  Module to apply correction
+ * @param   dc_i    DC offset for the I channel
+ * @param   dc_q    DC offset for the Q channel
+ *
+ * @return 0 on success, value from \ref RETCODES list on failure
+ */
+API_EXPORT int bladerf_get_dc_correction(struct bladerf *dev, bladerf_module module, int *dc_i, int *dc_q);
+
 /* @} (End of LOW_LEVEL) */
 
 #ifdef __cplusplus
@@ -1089,3 +1129,4 @@ API_EXPORT int bladerf_calibrate_dc(struct bladerf *dev, bladerf_cal_module modu
 #endif
 
 #endif /* BLADERF_H_ */
+

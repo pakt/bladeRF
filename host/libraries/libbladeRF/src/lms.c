@@ -1155,3 +1155,79 @@ int lms_calibrate_dc(struct bladerf *dev, bladerf_cal_module module)
     return 0;
 }
 
+static int sign(int x)
+{
+    return x < 0 ? 1 : 0;
+}
+
+int lms_set_dc_correction(struct bladerf *dev, bladerf_module module, int dc_i, int dc_q)
+{
+    uint8_t val;
+    if (module == BLADERF_MODULE_RX) {
+        /* Register is in the format:
+         *  <6>     Sign
+         *  <5:0>   Magnitude
+         */
+        bladerf_lms_read(dev, 0x71, &val);
+        val &= ~(0x7f);
+        val |= (sign(dc_i)<<6) | (abs(dc_i)&0x3f);
+        bladerf_lms_write(dev, 0x71, val);
+
+        bladerf_lms_read(dev, 0x72, &val);
+        val &= ~(0x7f);
+        val |= (sign(dc_q)<<6) | (abs(dc_q)&0x3f);
+        bladerf_lms_write(dev, 0x72, val);
+    } else {
+        /* Register is all 8 bits with each LSB = 0.0625mV 
+         * stored in offset binary format where:
+         *  00000000    -16mV
+         *  ...
+         *  10000000    0mV
+         *  ...
+         *  11111111    15.9375mV
+         *
+         *  Input to the function, in this case, will be raw value
+         */
+        bladerf_lms_write(dev, 0x42, dc_i&0xff);
+        bladerf_lms_write(dev, 0x43, dc_q&0xff);
+    }
+    /* TODO: Return something appropriate if something goes awry */
+    return 0;
+}
+
+int lms_get_dc_correction(struct bladerf *dev, bladerf_module module, int *dc_i, int *dc_q)
+{
+    uint8_t correction, val;
+    if (module == BLADERF_MODULE_RX) {
+        /* Register is in the format:
+         *  <6>     Sign
+         *  <5:0>   Magnitude
+         */
+        bladerf_lms_read(dev, 0x71, &val);
+        correction = val&0x3f;
+        if (val&0x40) correction = -correction;
+        *dc_i = correction;
+
+        bladerf_lms_read(dev, 0x72, &val);
+        correction = val&0x3f;
+        if (val&0x40) correction = -correction;
+        *dc_q = correction;
+    } else {
+        /* Register is all 8 bits with each LSB = 0.0625mV 
+         * stored in offset binary format where:
+         *  00000000    -16mV
+         *  ...
+         *  10000000    0mV
+         *  ...
+         *  11111111    15.9375mV
+         *
+         *  Input to the function, in this case, will be raw value
+         */
+        bladerf_lms_read(dev, 0x42, &val);
+        *dc_i = val;
+        bladerf_lms_read(dev, 0x43, &val);
+        *dc_q = val;
+    }
+    /* TODO: Return something appropriate if something goes awry */
+    return 0;
+}

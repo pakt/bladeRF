@@ -510,6 +510,30 @@ void lms_dump_registers(struct bladerf *dev);
 int lms_calibrate_dc(struct bladerf *dev, bladerf_cal_module module);
 
 /**
+ * Set the DC correction value for a specific module.
+ *
+ * @param[in]   dev     Device handle
+ * @param[in]   module  Module to correct
+ * @param[in]   dc_i    DC offset for the I channel
+ * @param[in]   dc_q    DC offset for the Q channel
+ *
+ * @return 0 on success, -1 on failure.
+ */
+int lms_set_dc_correction(struct bladerf *dev, bladerf_module module, int dc_i, int dc_q);
+
+/**
+ * Get the DC correction value for a specific module.
+ *
+ * @param[in]   dev     Device handle
+ * @param[in]   module  Module to get information on
+ * @param[out]  dc_i    DC offset for the I channel
+ * @param[out]  dc_q    DC offset for the Q channel
+ *
+ * @return 0 on sucsess, -1 on failure.
+ */
+int lms_get_dc_correction(struct bladerf *dev, bladerf_module module, int *dc_i, int *dc_q);
+
+/**
  * Initialize and calibrate the low pass filters
  *
  * @param[in]   dev     Device handle
