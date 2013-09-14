@@ -77,6 +77,9 @@ int bladerf_init_device(struct bladerf *dev)
     bladerf_set_frequency( dev, BLADERF_MODULE_TX, 1000000000 );
     bladerf_set_frequency( dev, BLADERF_MODULE_RX, 1000000000 );
 
+    /* Set the calibrated VCTCXO DAC value */
+    bladerf_dac_write( dev, dev->dac_trim );
+
     /* TODO: Read this return from the SPI calls */
     return 0;
 }
@@ -223,7 +226,7 @@ static int extract_field(char *ptr, int len, char *field,
                 return 0;
             }
         } else {
-            bladerf_log_warning( "%s: Field checksum mistmatch\n", __FUNCTION__);
+            log_warning( "%s: Field checksum mismatch\n", __FUNCTION__);
             return BLADERF_ERR_INVAL;
         }
         ub += c + 3; //skip past `c' bytes, 2 byte CRC field, and 1 byte len field
@@ -265,7 +268,7 @@ int bladerf_get_and_cache_serial(struct bladerf *dev)
                                     BLADERF_SERIAL_LENGTH - 1);
 
     if (status < 0) {
-        bladerf_log_debug("Unable to fetch serial number. Defaulting to 0's\n");
+        log_debug("Unable to fetch serial number. Defaulting to 0's\n");
         memset(dev->serial, 0, BLADERF_SERIAL_LENGTH);
     }
 
@@ -287,7 +290,7 @@ int bladerf_get_and_cache_vctcxo_trim(struct bladerf *dev)
     if (!status && ok) {
         dev->dac_trim = trim;
     } else {
-        bladerf_log_debug("Unable to fetch DAC trim. Defaulting to 0x8000\n");
+        log_debug("Unable to fetch DAC trim. Defaulting to 0x8000\n");
         dev->dac_trim = 0x8000;
     }
 

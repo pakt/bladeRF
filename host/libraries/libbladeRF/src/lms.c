@@ -91,25 +91,41 @@ void lms_lpf_enable(struct bladerf *dev, bladerf_module mod, lms_bw_t bw)
     return;
 }
 
-void lms_lpf_bypass(struct bladerf *dev, bladerf_module mod)
-{
-    uint8_t reg = (mod == BLADERF_MODULE_RX) ? 0x55 : 0x35;
-    uint8_t data;
-    bladerf_lms_read(dev, reg, &data);
-    data |= (1<<6);
-    bladerf_lms_write(dev, reg, data);
-    return;
-}
-
-// Disable the LPF for a specific module
-void lms_lpf_disable(struct bladerf *dev, bladerf_module mod)
+void lms_lpf_get_mode(struct bladerf *dev, bladerf_module mod, bladerf_lpf_mode *mode)
 {
     uint8_t reg = (mod == BLADERF_MODULE_RX) ? 0x54 : 0x34;
     uint8_t data;
+
     bladerf_lms_read(dev, reg, &data);
-    data &= ~(1<<6);
-    bladerf_lms_write(dev, reg, data);
-    return;
+    if (!(data&(1<<6))) {
+        *mode = BLADERF_LPF_DISABLED;
+    } else {
+        bladerf_lms_read(dev, reg+1, &data);
+        if (data&(1<<6)) {
+            *mode = BLADERF_LPF_BYPASSED;
+        } else {
+            *mode = BLADERF_LPF_NORMAL;
+        }
+    }
+}
+
+void lms_lpf_set_mode(struct bladerf *dev, bladerf_module mod, bladerf_lpf_mode mode)
+{
+    uint8_t reg = (mod == BLADERF_MODULE_RX) ? 0x54 : 0x34;
+    uint8_t data_l, data_h;
+    bladerf_lms_read(dev, reg,   &data_l);
+    bladerf_lms_read(dev, reg+1, &data_h);
+    if (mode == BLADERF_LPF_DISABLED) {
+        data_l &= ~(1<<6);
+    } else if (mode == BLADERF_LPF_BYPASSED) {
+        data_l |= (1<<6);
+        data_h |= (1<<6);
+    } else {
+        data_l |= (1<<6);
+        data_h &= ~(1<<6);
+    }
+    bladerf_lms_write(dev, reg  , data_l);
+    bladerf_lms_write(dev, reg+1, data_h);
 }
 
 // Get the bandwidth for the selected module
@@ -247,7 +263,7 @@ void lms_rxvga1_set_gain(struct bladerf *dev, uint8_t gain)
 {
     uint8_t data;
     if (gain > 120) {
-        bladerf_log_info("%s: %d being clamped to 120\n", __FUNCTION__, gain);
+        log_info("%s: %d being clamped to 120\n", __FUNCTION__, gain);
         gain = 120;
     }
     bladerf_lms_read(dev, 0x76, &data);
@@ -284,7 +300,7 @@ void lms_rxvga2_set_gain(struct bladerf *dev, uint8_t gain)
     // go above 30dB
     if ((gain&0x1f) > 10)
     {
-        bladerf_log_warning("Setting gain above 30dB? You crazy!!\n");
+        log_warning("Setting gain above 30dB? You crazy!!\n");
     }
     bladerf_lms_read(dev, 0x65, &data);
     data &= ~(0x1f);
@@ -500,7 +516,7 @@ void lms_loopback_enable(struct bladerf *dev, bladerf_loopback mode)
 
         case BLADERF_LB_BB_VGA2:
             // Disable RXLPF first
-            lms_lpf_disable(dev, BLADERF_MODULE_RX);
+            lms_lpf_set_mode(dev, BLADERF_MODULE_RX, BLADERF_LPF_DISABLED);
 
             // Enable TX and RX loopback
             lms_tx_loopback_enable(dev, TXLB_BB);
@@ -511,7 +527,7 @@ void lms_loopback_enable(struct bladerf *dev, bladerf_loopback mode)
             // Disable RXLPF, RXVGA2, and RXVGA1
             lms_rxvga1_disable(dev);
             lms_rxvga2_disable(dev);
-            lms_lpf_disable(dev, BLADERF_MODULE_RX);
+            lms_lpf_set_mode(dev, BLADERF_MODULE_RX, BLADERF_LPF_DISABLED);
 
             // Enable TX and RX loopback
             lms_tx_loopback_enable(dev, TXLB_BB);
@@ -710,12 +726,12 @@ uint32_t lms_frequency_to_hz(struct lms_freq *f)
 // Print a frequency structure
 void lms_print_frequency(struct lms_freq *f)
 {
-    bladerf_log_debug("  x        : %d\n", f->x);
-    bladerf_log_debug("  nint     : %d\n", f->nint);
-    bladerf_log_debug("  nfrac    : %u\n", f->nfrac);
-    bladerf_log_debug("  freqsel  : %x\n", f->freqsel);
-    bladerf_log_debug("  reference: %u\n", f->reference);
-    bladerf_log_debug("  freq     : %u\n", lms_frequency_to_hz(f));
+    log_debug("  x        : %d\n", f->x);
+    log_debug("  nint     : %d\n", f->nint);
+    log_debug("  nfrac    : %u\n", f->nfrac);
+    log_debug("  freqsel  : %x\n", f->freqsel);
+    log_debug("  reference: %u\n", f->reference);
+    log_debug("  freq     : %u\n", lms_frequency_to_hz(f));
 }
 
 // Get the frequency structure
@@ -854,7 +870,7 @@ void lms_set_frequency(struct bladerf *dev, bladerf_module mod, uint32_t freq)
                     state = VCO_NORM;
                 }
             } else {
-                bladerf_log_warning("Invalid VCOCAP\n");
+                log_warning("Invalid VCOCAP\n");
             }
         }
 
@@ -862,14 +878,14 @@ void lms_set_frequency(struct bladerf *dev, bladerf_module mod, uint32_t freq)
             stop_i = 63;
 
         if ((start_i == -1) || (stop_i == -1))
-            bladerf_log_warning("Can't find VCOCAP value while tuning\n");
+            log_warning("Can't find VCOCAP value while tuning\n");
 
         avg_i = (start_i + stop_i) >> 1;
 
         bladerf_lms_write(dev, base + 9, avg_i | data);
 
         bladerf_lms_read(dev, base + 10, &v);
-        bladerf_log_debug("VTUNE: %x\n", v >> 6);
+        log_debug("VTUNE: %x\n", v >> 6);
     }
 
     // Turn off the DSMs
@@ -887,7 +903,7 @@ void lms_dump_registers(struct bladerf *dev)
     for (i = 0; i < num_reg; i++)
     {
         bladerf_lms_read(dev, lms_reg_dumpset[i], &data);
-        bladerf_log_info("addr: %x data: %x\n", lms_reg_dumpset[i], data);
+        log_info("addr: %x data: %x\n", lms_reg_dumpset[i], data);
     }
 }
 
@@ -1003,7 +1019,7 @@ static int lms_dc_cal_loop(struct bladerf *dev, uint8_t base, uint8_t cal_addres
     uint8_t i, val, control;
     bool done = false;
 
-    bladerf_log_debug( "Calibrating module %2.2x:%2.2x\n", base, cal_address );
+    log_debug( "Calibrating module %2.2x:%2.2x\n", base, cal_address );
 
     /* Set the calibration address for the block, and start it up */
     bladerf_lms_read(dev, base+0x03, &val);
@@ -1041,11 +1057,11 @@ static int lms_dc_cal_loop(struct bladerf *dev, uint8_t base, uint8_t cal_addres
         if( ((val>>1)&1) == 0 ) {
             /* We think we're done, but we need to check DC_LOCK */
             if (((val>>2)&7) != 0 && ((val>>2)&7) != 7) {
-                bladerf_log_debug( "Converged in %d iterations for %2x:%2x\n", i+1, base, cal_address );
+                log_debug( "Converged in %d iterations for %2x:%2x\n", i+1, base, cal_address );
                 done = true;
                 break ;
             } else {
-                bladerf_log_debug( "DC_CLBR_DONE but no DC_LOCK - rekicking\n" );
+                log_debug( "DC_CLBR_DONE but no DC_LOCK - rekicking\n" );
                 control |= (1<<5);
                 bladerf_lms_write(dev, base+0x03, control);
                 control &= ~(1<<5);
@@ -1055,13 +1071,13 @@ static int lms_dc_cal_loop(struct bladerf *dev, uint8_t base, uint8_t cal_addres
     }
 
     if (done == false) {
-        bladerf_log_warning( "Never converged - DC_CLBR_DONE: %d DC_LOCK: %d\n", (val>>1)&1, (val>>2)&7 );
+        log_warning( "Never converged - DC_CLBR_DONE: %d DC_LOCK: %d\n", (val>>1)&1, (val>>2)&7 );
     }
 
     /* See what the DC register value is and return it to the caller */
     bladerf_lms_read(dev, base, dc_regval);
     *dc_regval &= 0x3f;
-    bladerf_log_debug( "DC_REGVAL: %d\n", *dc_regval );
+    log_debug( "DC_REGVAL: %d\n", *dc_regval );
 
     /* TODO: If it didn't converge, return back some error */
     return 0;
@@ -1106,6 +1122,9 @@ int lms_calibrate_dc(struct bladerf *dev, bladerf_cal_module module)
             base = 0x60;
             addrs = 5;
             break;
+
+        default:
+            return BLADERF_ERR_INVAL;
     }
 
     /* Enable the appropriate clock based on the module */

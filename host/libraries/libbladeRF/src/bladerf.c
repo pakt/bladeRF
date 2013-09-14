@@ -107,30 +107,30 @@ int bladerf_open(struct bladerf **device, const char *dev_id)
         if (!dev->legacy) {
 
             status = bladerf_get_and_cache_serial(dev);
-            if (!status) {
-                bladerf_log_warning( "Could not extract serial number\n" ) ;
+            if (status < 0) {
+                log_warning( "Could not extract serial number\n" ) ;
             }
 
             status = bladerf_get_and_cache_vctcxo_trim(dev);
-            if (!status) {
-                bladerf_log_warning( "Could not extract VCTCXO trim value\n" ) ;
+            if (status < 0) {
+                log_warning( "Could not extract VCTCXO trim value\n" ) ;
             }
 
             status = bladerf_get_and_cache_fpga_size(dev);
-            if (!status) {
-                bladerf_log_warning( "Could not extract FPGA size\n" ) ;
+            if (status < 0) {
+                log_warning( "Could not extract FPGA size\n" ) ;
             }
 
             /* If any of these routines failed, the dev structure should
              * still have had it's fields dummied, so they're safe to
              * print here (i.e., not uninitialized) */
-            bladerf_log_debug("%s: fw=v%d.%d serial=%s trim=0x%.4x fpga_size=%d\n",
+            log_debug("%s: fw=v%d.%d serial=%s trim=0x%.4x fpga_size=%d\n",
                     __FUNCTION__, dev->fw_major, dev->fw_minor,
                     dev->serial, dev->dac_trim, dev->fpga_size);
         } else {
             printf("********************************************************************************\n");
             printf("* ENTERING LEGACY MODE, PLEASE UPGRADE TO THE LATEST FIRMWARE BY RUNNING:\n");
-            printf("* wget http://nuand.com/fx3/latest.img ; bladeRF-cli -b -f latest.img\n");
+            printf("* wget http://nuand.com/fx3/latest.img ; bladeRF-cli -f latest.img\n");
             printf("********************************************************************************\n");
         }
 
@@ -160,15 +160,19 @@ int bladerf_set_loopback(struct bladerf *dev, bladerf_loopback l)
 }
 
 
-int bladerf_set_rational_sample_rate(struct bladerf *dev, bladerf_module module, unsigned int integer, unsigned int num, unsigned int denom)
+int bladerf_set_rational_sample_rate(struct bladerf *dev, bladerf_module module, struct bladerf_rational_rate *rate, struct bladerf_rational_rate *actual)
 {
-    /* TODO: Program the Si5338 to be 2x the desired sample rate */
-    return 0;
+    return si5338_set_rational_sample_rate(dev, module, rate, actual);
 }
 
 int bladerf_set_sample_rate(struct bladerf *dev, bladerf_module module, uint32_t rate, uint32_t *actual)
 {
     return si5338_set_sample_rate(dev, module, rate, actual);
+}
+
+int bladerf_get_rational_sample_rate(struct bladerf *dev, bladerf_module module, struct bladerf_rational_rate *rate)
+{
+    return si5338_get_rational_sample_rate(dev, module, rate);
 }
 
 int bladerf_get_sample_rate(struct bladerf *dev, bladerf_module module, unsigned int *rate)
@@ -183,14 +187,14 @@ int bladerf_get_sampling(struct bladerf *dev, bladerf_sampling *sampling)
 
     status = bladerf_lms_read( dev, 0x09, &val );
     if (status) {
-        bladerf_log_warning( "Could not read state of ADC pin connectivity\n" );
+        log_warning( "Could not read state of ADC pin connectivity\n" );
         goto bladerf_get_sampling__done;
     }
     external = val&(1<<7) ? 1 : 0;
 
     status = bladerf_lms_read( dev, 0x64, &val );
     if (status) {
-        bladerf_log_warning( "Could not read RXVGA2 state\n" );
+        log_warning( "Could not read RXVGA2 state\n" );
         goto bladerf_get_sampling__done;
     }
     external |= val&(1<<1) ? 0 : 2;
@@ -213,56 +217,56 @@ int bladerf_set_sampling(struct bladerf *dev, bladerf_sampling sampling)
         /* Disconnect the ADC input from the outside world */
         status = bladerf_lms_read( dev, 0x09, &val );
         if (status) {
-            bladerf_log_warning( "Could not read LMS to connect ADC to external pins\n" );
+            log_warning( "Could not read LMS to connect ADC to external pins\n" );
             goto bladerf_set_sampling__done ;
         }
 
         val &= ~(1<<7) ;
         status = bladerf_lms_write( dev, 0x09, val );
         if (status) {
-            bladerf_log_warning( "Could not write LMS to connect ADC to external pins\n" );
+            log_warning( "Could not write LMS to connect ADC to external pins\n" );
             goto bladerf_set_sampling__done;
         }
 
         /* Turn on RXVGA2 */
         status = bladerf_lms_read( dev, 0x64, &val );
         if (status) {
-            bladerf_log_warning( "Could not read LMS to disable RXVGA2\n" );
+            log_warning( "Could not read LMS to disable RXVGA2\n" );
             goto bladerf_set_sampling__done;
         }
 
         val |= (1<<1) ;
         status = bladerf_lms_write( dev, 0x64, val );
         if (status) {
-            bladerf_log_warning( "Could not write LMS to disable RXVGA2\n" );
+            log_warning( "Could not write LMS to disable RXVGA2\n" );
             goto bladerf_set_sampling__done;
         }
     } else {
         /* Turn off RXVGA2 */
         status = bladerf_lms_read( dev, 0x64, &val );
         if (status) {
-            bladerf_log_warning( "Could not read the LMS to enable RXVGA2\n" );
+            log_warning( "Could not read the LMS to enable RXVGA2\n" );
             goto bladerf_set_sampling__done;
         }
 
         val &= ~(1<<1) ;
         status = bladerf_lms_write( dev, 0x64, val );
         if (status) {
-            bladerf_log_warning( "Could not write the LMS to enable RXVGA2\n" );
+            log_warning( "Could not write the LMS to enable RXVGA2\n" );
             goto bladerf_set_sampling__done;
         }
 
         /* Connect the external ADC pins to the internal ADC input */
         status = bladerf_lms_read( dev, 0x09, &val );
         if (status) {
-            bladerf_log_warning( "Could not read the LMS to connect ADC to internal pins\n" );
+            log_warning( "Could not read the LMS to connect ADC to internal pins\n" );
             goto bladerf_set_sampling__done;
         }
 
         val |= (1<<7) ;
         status = bladerf_lms_write( dev, 0x09, val );
         if (status) {
-            bladerf_log_warning( "Could not write the LMS to connect ADC to internal pins\n" );
+            log_warning( "Could not write the LMS to connect ADC to internal pins\n" );
         }
     }
 
@@ -270,20 +274,14 @@ bladerf_set_sampling__done:
     return status;
 }
 
-int bladerf_get_rational_sample_rate(struct bladerf *dev, bladerf_module module, unsigned int integer, unsigned int num, unsigned int denom)
-{
-    /* TODO: Read the Si5338 and figure out the sample rate */
-    return 0;
-}
-
 int bladerf_set_txvga2(struct bladerf *dev, int gain)
 {
     if( gain > 25 ) {
-        bladerf_log_info( "%s: %d being clamped to 25dB\n", __FUNCTION__, gain );
+        log_info( "%s: %d being clamped to 25dB\n", __FUNCTION__, gain );
         gain = 25;
     }
     if( gain < 0 ) {
-        bladerf_log_info( "%s: %d being clamped to 0dB\n", __FUNCTION__, gain );
+        log_info( "%s: %d being clamped to 0dB\n", __FUNCTION__, gain );
         gain = 0;
     }
     /* TODO: Make return values for lms call and return it for failure */
@@ -303,11 +301,11 @@ int bladerf_get_txvga2(struct bladerf *dev, int *gain)
 int bladerf_set_txvga1(struct bladerf *dev, int gain)
 {
     if( gain < -35 ) {
-        bladerf_log_info( "%s: %d being clamped to -35dB\n", __FUNCTION__, gain );
+        log_info( "%s: %d being clamped to -35dB\n", __FUNCTION__, gain );
         gain = -35;
     }
     if( gain > -4 ) {
-        bladerf_log_info( "%s: %d being clamped to -4dB\n", __FUNCTION__, gain );
+        log_info( "%s: %d being clamped to -4dB\n", __FUNCTION__, gain );
         gain = -4;
     }
     /* TODO: Make return values for lms call and return it for failure */
@@ -394,6 +392,22 @@ int bladerf_get_bandwidth(struct bladerf *dev, bladerf_module module,
     return 0;
 }
 
+int bladerf_set_lpf_mode(struct bladerf *dev, bladerf_module module,
+                         bladerf_lpf_mode mode)
+{
+    /* TODO: Make return values for lms call and return it for failure */
+    lms_lpf_set_mode( dev, module, mode );
+    return 0;
+}
+
+int bladerf_get_lpf_mode(struct bladerf *dev, bladerf_module module,
+                         bladerf_lpf_mode *mode)
+{
+    /* TODO: Make return values for lms call and return it for failure */
+    lms_lpf_get_mode( dev, module, mode );
+    return 0;
+}
+
 int bladerf_select_band(struct bladerf *dev, bladerf_module module,
                         unsigned int frequency)
 {
@@ -442,7 +456,7 @@ int bladerf_tx(struct bladerf *dev, bladerf_format format, void *samples,
                int num_samples, struct bladerf_metadata *metadata)
 {
     if (num_samples < 1024 || num_samples % 1024 != 0) {
-        bladerf_log_warning("num_samples must be multiples of 1024\n");
+        log_warning("num_samples must be multiples of 1024\n");
         return BLADERF_ERR_INVAL;
     }
 
@@ -453,7 +467,7 @@ int bladerf_rx(struct bladerf *dev, bladerf_format format, void *samples,
                    int num_samples, struct bladerf_metadata *metadata)
 {
     if (num_samples < 1024 || num_samples % 1024 != 0) {
-        bladerf_log_warning("num_samples must be multiples of 1024\n");
+        log_warning("num_samples must be multiples of 1024\n");
         return BLADERF_ERR_INVAL;
     }
 
@@ -477,12 +491,12 @@ int bladerf_init_stream(struct bladerf_stream **stream,
     int status = 0;
 
     if (num_transfers > num_buffers) {
-        bladerf_log_warning("num_transfers must be <= num_buffers\n");
+        log_warning("num_transfers must be <= num_buffers\n");
         return BLADERF_ERR_INVAL;
     }
 
     if (samples_per_buffer < 1024 || samples_per_buffer% 1024 != 0) {
-        bladerf_log_warning("samples_per_buffer must be multiples of 1024\n");
+        log_warning("samples_per_buffer must be multiples of 1024\n");
         return BLADERF_ERR_INVAL;
     }
 
@@ -564,7 +578,7 @@ void bladerf_deinit_stream(struct bladerf_stream *stream)
     size_t i;
 
     while(stream->state != STREAM_DONE && stream->state != STREAM_IDLE) {
-        bladerf_log_info( "Stream not done...\n" );
+        log_info( "Stream not done...\n" );
         usleep(1000000);
     }
 
@@ -665,8 +679,8 @@ int bladerf_flash_firmware(struct bladerf *dev, const char *firmware_file)
          */
         if (!getenv("BLADERF_SKIP_FW_SIZE_CHECK") &&
                 (buf_size < (50 * 1024) || (buf_size > (1 * 1024 * 1024)))) {
-            bladerf_log_error("Error: Detected potentially invalid firmware file.\n");
-            bladerf_log_error("Define BLADERF_SKIP_FW_SIZE_CHECK in your evironment "
+            log_error("Error: Detected potentially invalid firmware file.\n");
+            log_error("Define BLADERF_SKIP_FW_SIZE_CHECK in your evironment "
                        "to skip this check.\n");
             status = BLADERF_ERR_INVAL;
         } else {
@@ -707,15 +721,6 @@ int bladerf_load_fpga(struct bladerf *dev, const char *fpga_file)
     uint8_t *buf;
     size_t  buf_size;
     int status;
-    int is_loaded;
-
-    is_loaded = dev->fn->is_fpga_configured(dev);
-    if (is_loaded > 0) {
-        bladerf_log_info("FPGA is already loaded -- reloading.\n");
-    } else if (is_loaded < 0) {
-        bladerf_log_warning("Failed to determine FPGA status. (%d) "
-                "Attempting to load anyway...\n", is_loaded);
-    }
 
     /* TODO sanity check FPGA:
      *  - Check for x40 vs x115 and verify FPGA image size
@@ -783,6 +788,11 @@ const char * bladerf_version(unsigned int *major,
     }
 
     return LIBBLADERF_VERSION;
+}
+
+bladerf_log_level bladerf_log_set_verbosity(bladerf_log_level level)
+{
+    return log_set_verbosity(level);
 }
 
 /*------------------------------------------------------------------------------

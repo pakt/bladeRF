@@ -14,7 +14,7 @@
 extern "C" {
 #endif
 
-/* Function visibility */
+/** Marks an API routine to be made visible to dynamic loader  */
 #if defined _WIN32 || defined _CYGWIN__
 #   ifdef __GNUC__
 #       define API_EXPORT __attribute__ ((dllexport))
@@ -66,7 +66,7 @@ typedef enum {
     BLADERF_BACKEND_LIBUSB  /**< libusb */
 } bladerf_backend;
 
-/* Length of device serial number string, including NUL-terminator */
+/** Length of device serial number string, including NUL-terminator */
 #define BLADERF_SERIAL_LENGTH   33
 
 /**
@@ -78,6 +78,16 @@ struct bladerf_devinfo {
     uint8_t usb_bus;            /**< Bus # device is attached to */
     uint8_t usb_addr;           /**< Device address on bus */
     unsigned int instance;      /**< Device instance or ID */
+};
+
+/**
+ * Rational sample rate representation
+ */
+struct bladerf_rational_rate {
+    uint64_t integer;           /**< Integer portion */
+    uint64_t num;               /**< Numerator in fractional portion */
+    uint64_t den;               /**< Denominator in fractional portion. This
+                                     must be > 0. */
 };
 
 /**
@@ -154,6 +164,15 @@ typedef enum {
 } bladerf_lna_gain;
 
 /**
+ * LPF mode
+ */
+typedef enum {
+    BLADERF_LPF_NORMAL,     /**< LPF connected and enabled */
+    BLADERF_LPF_BYPASSED,   /**< LPF bypassed */
+    BLADERF_LPF_DISABLED    /**< LPF disabled */
+} bladerf_lpf_mode;
+
+/**
  * Module selection for those which have both RX and TX constituents
  */
 typedef enum
@@ -198,18 +217,6 @@ typedef enum {
     BLADERF_LOG_LEVEL_ERROR,    /**< Error level logging */
     BLADERF_LOG_LEVEL_CRITICAL  /**< Fatal error level logging */
 } bladerf_log_level;
-
-/**
- * Sets the filter level for displayed log messages. Messages that are at
- * or above the specified log level will be written to the log output, while
- * messages with a lower log level will be suppressed. This function returns
- * the previous log level.
- *
- * @param   level       The new log level filter value
- *
- * @return The previous log level
- */
-bladerf_log_level bladerf_log_set_verbosity(bladerf_log_level level);
 
 /**
  * For both RX and TX, the stream callback receives:
@@ -393,22 +400,18 @@ API_EXPORT int bladerf_set_sample_rate(struct bladerf *dev, bladerf_module modul
 /**
  * Configure the device's sample rate as a rational fraction of Hz.
  * Sample rates are in the form of integer + num/denom.
- * TODO: Should this be the only way we set values, and num=0 and denom=1
- * for integer portions?
  *
  * @param[in]   dev         Device handle
  * @param[in]   module      Module to change
- * @param[in]   integer     Integer portion of the equation integer + num/denom
- * @param[in]   num         Numerator of rational fractional part
- * @param[in]   denom       Denominator of rational fractional part
+ * @param[in]   rate        Rational sample rate
+ * @param[out]  actual      Actual rational sample rate
  *
  * @return 0 on success, value from \ref RETCODES list on failure
  */
 API_EXPORT int bladerf_set_rational_sample_rate(struct bladerf *dev,
                                                 bladerf_module module,
-                                                unsigned int integer,
-                                                unsigned int num,
-                                                unsigned int denom);
+                                                struct bladerf_rational_rate *rate,
+                                                struct bladerf_rational_rate *actual);
 
 /**
  * Configure the sampling of the LMS6002D to be either internal or
@@ -448,6 +451,19 @@ API_EXPORT int bladerf_get_sampling(struct bladerf *dev,
 API_EXPORT int bladerf_get_sample_rate(struct bladerf *dev,
                                        bladerf_module module,
                                        unsigned int *rate);
+
+/**
+ * Read the device's sample rate in rational Hz
+ *
+ * @param[in]   dev         Device handle
+ * @param[in]   module      Module to query
+ * @param[out]  rate        Pointer to returned rational sample rate
+ *
+ * @return 0 on success, value from \ref RETCODES list upon failure
+ */
+API_EXPORT int bladerf_get_rational_sample_rate(struct bladerf *dev,
+                                                bladerf_module module,
+                                                struct bladerf_rational_rate *rate);
 
 /**
  * Set the PA gain in dB
@@ -570,6 +586,30 @@ API_EXPORT int bladerf_set_bandwidth(struct bladerf *dev, bladerf_module module,
  */
 API_EXPORT int bladerf_get_bandwidth(struct bladerf *dev, bladerf_module module,
                                      unsigned int *bandwidth);
+
+/**
+ * Set the LMS LPF mode to bypass or disable it
+ *
+ * @param       dev         Device handle
+ * @param       module      Module for mode request
+ * @param       mode        Mode to be set
+ *
+ * @return 0 on success, value from \ref RETCODES list on failure
+ */
+API_EXPORT int bladerf_set_lpf_mode(struct bladerf *dev, bladerf_module module,
+                                    bladerf_lpf_mode mode);
+
+/**
+ * Get the current mode of the LMS LPF
+ *
+ * @param       dev         Device handle
+ * @param       module      Module for mode request
+ * @param       mode        Current mode of the LPF
+ *
+ * @return 0 on success, value from \ref RETCODES list on failure
+ */
+API_EXPORT int bladerf_get_lpf_mode(struct bladerf *dev, bladerf_module module,
+                                    bladerf_lpf_mode *mode);
 
 /**
  * Select the appropriate band path given a frequency in Hz.
@@ -852,9 +892,7 @@ API_EXPORT int bladerf_device_reset(struct bladerf *dev);
  * @param   dev         Device handle
  * @param   fpga        Full path to FPGA bitstream
  *
- * @return 0 upon successfully,
- *         1 if FPGA is already loaded,
- *         or a value from \ref RETCODES list on failure
+ * @return 0 upon successfully, or a value from \ref RETCODES list on failure
  */
 API_EXPORT int bladerf_load_fpga(struct bladerf *dev, const char *fpga);
 
@@ -893,6 +931,18 @@ API_EXPORT const char * bladerf_strerror(int error);
 API_EXPORT const char * bladerf_version(unsigned int *major,
                                         unsigned int *minor,
                                         unsigned int *patch);
+
+/**
+ * Sets the filter level for displayed log messages. Messages that are at
+ * or above the specified log level will be written to the log output, while
+ * messages with a lower log level will be suppressed. This function returns
+ * the previous log level.
+ *
+ * @param   level       The new log level filter value
+ *
+ * @return The previous log level
+ */
+API_EXPORT bladerf_log_level bladerf_log_set_verbosity(bladerf_log_level level);
 
 /** @} (End of FN_MISC) */
 
