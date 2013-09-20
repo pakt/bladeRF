@@ -1,9 +1,12 @@
 #ifndef EXTIO_BLADERF_H
 #define EXTIO_BLADERF_H
 
-#define EXTIO_API __declspec(dllexport) __stdcall
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-#include "stdint.h"
+#define EXTIO_API __declspec(dllexport) __stdcall
+#include <stdint.h>
 
 /* Function prototypes taken from:
  *
@@ -50,5 +53,9 @@ extern "C" long     EXTIO_API ExtIoGetBandwidth(int srate_idx);
 
 extern "C" int      EXTIO_API ExtIoGetSetting( int idx, char * description, char * value );
 extern "C" void     EXTIO_API ExtIoSetSetting( int idx, const char * value );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

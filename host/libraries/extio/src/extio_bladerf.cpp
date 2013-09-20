@@ -1,5 +1,5 @@
+#include <string.h>
 #include "extio_bladerf.h"
-
 #include "libbladeRF.h"
 
 /* Some constants */
@@ -41,7 +41,7 @@ bool InitHW(char *name, char *model, int& type) {
     /* Check to see if the FPGA has been loaded */
     if (bladerf_is_fpga_configured(dev) == 0) {
         /* Load the FPGA */
-        status = bladerf_load_fpga(dev, fpga_fname);
+		status = bladerf_load_fpga(dev, fpga_filename);
         if (status < 0) {
             return false;
         }
@@ -98,7 +98,7 @@ void CloseHW(void) {
     /* Check to see if we have a device open */
     if (dev) {
         /* ... and close it */
-        status = bladerf_close(dev);
+        bladerf_close(dev);
         dev = NULL;
     }
 
@@ -167,7 +167,7 @@ int GetStatus(void) {
 
 void SetCallback(void (* callback)(int, int, float, short *)) {
     /* Globally register callback */
-    cb = callback;
+    cb = (extio_callback *)callback;
     return;
 }
 

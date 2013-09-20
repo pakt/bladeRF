@@ -51,3 +51,4 @@ set(EXTIO_SOURCE
 )
 
 add_library(extio SHARED ${EXTIO_SOURCE})
+target_link_libraries(extio libbladerf_shared)
