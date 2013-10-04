@@ -5,7 +5,7 @@
 # This file is part of the bladeRF project
 #
 cmake_minimum_required(VERSION 2.8)
-project(extio CXX C)
+project(ExtIO_bladeRF CXX C)
 
 # This is a windows-only library
 if(WIN32)
@@ -50,5 +50,5 @@ set(EXTIO_SOURCE
         src/extio_bladerf.cpp
 )
 
-add_library(extio SHARED ${EXTIO_SOURCE})
-target_link_libraries(extio libbladerf_shared)
+add_library(ExtIO_bladeRF SHARED ${EXTIO_SOURCE})
+target_link_libraries(ExtIO_bladeRF libbladerf_shared)
