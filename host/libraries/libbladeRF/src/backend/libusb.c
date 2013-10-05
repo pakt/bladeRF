@@ -1720,7 +1720,7 @@ static void LIBUSB_CALL lusb_stream_cb(struct libusb_transfer *transfer)
     size_t bytes_per_buffer;
 
     /* Check to see if the transfer has been cancelled or errored */
-    if( transfer->status != LIBUSB_TRANSFER_COMPLETED ) {
+    if( (transfer->status != LIBUSB_TRANSFER_COMPLETED) && (transfer->status != LIBUSB_TRANSFER_TIMED_OUT) ) {
 
         /* Errored out for some reason .. */
         stream->state = STREAM_SHUTTING_DOWN;
@@ -1748,9 +1748,11 @@ static void LIBUSB_CALL lusb_stream_cb(struct libusb_transfer *transfer)
                 stream->error_code = BLADERF_ERR_IO;
                 break;
 
+/*
             case LIBUSB_TRANSFER_TIMED_OUT:
                 stream->error_code = BLADERF_ERR_TIMEOUT;
                 break;
+*/
 
             case LIBUSB_TRANSFER_NO_DEVICE:
                 stream->error_code = BLADERF_ERR_NODEV;
@@ -1778,7 +1780,7 @@ static void LIBUSB_CALL lusb_stream_cb(struct libusb_transfer *transfer)
 
         /* Call user callback requesting more data to transmit */
         if (transfer->length != transfer->actual_length) {
-            log_warning( "Received short transfer\n" );
+            log_warning( "Received short transfer: %d/%d\n", transfer->actual_length, transfer->length );
             if ((transfer->actual_length & 3) != 0) {
                 log_warning( "Fractional samples received - stream likely corrupt\n" );
             }
