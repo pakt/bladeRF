@@ -16,6 +16,7 @@
 #  LIBUSB_HEADER_FILE:  the location of the C header file
 #  LIBUSB_INCLUDE_DIRS: the directorys that contain headers
 #  LIBUSB_LIBRARIES:    the library files
+#  LIBUSB_HAS_HOTPLUG   the library provides hotplug support
 
 if(DEFINED __INCLUDED_BLADERF_FINDLIBUSB_CMAKE)
     return()
@@ -32,11 +33,11 @@ include ( CheckIncludeFile )
 #
 # See http://www.libusb.org/wiki/windows_backend#LatestBinarySnapshots
 set(LIBUSB_PATH 
-		"C:/Program Files (x86)/libusbx-1.0.16"
-        CACHE
-		PATH
-		"Path to libusb files. (This is generally only needed for Windows users who downloaded binary distributions.)"
-    )
+    "C:/Program Files (x86)/libusbx-1.0.16"
+    CACHE
+    PATH
+    "Path to libusb files. (This is generally only needed for Windows users who downloaded binary distributions.)"
+)
 
 find_package ( PkgConfig )
 if ( PKG_CONFIG_FOUND )
@@ -113,10 +114,23 @@ if ( LIBUSB_FOUND )
 endif ( LIBUSB_FOUND )
 
 if ( LIBUSB_FOUND )
-  check_library_exists ( "${usb_LIBRARY}" libusb_get_device_list "" LIBUSB_VERSION_1.0 )
-  check_library_exists ( "${usb_LIBRARY}" libusb_error_name "" LIBUSB_VERSION_1.0 )
-  check_library_exists ( "${usb_LIBRARY}" libusb_handle_events_timeout_completed "" LIBUSB_VERSION_1.0 )
-  check_library_exists ( "${usb_LIBRARY}" libusb_get_version "" LIBUSB_VERSION_1.0 )
+
+  # Introduced in v1.0.10 - We require at least this version in Linux to compile.
+  check_library_exists ( "${usb_LIBRARY}" libusb_get_version "" LIBUSB_HAVE_GET_VERSION )
+  if ( NOT LIBUSB_HAVE_GET_VERSION )
+    message ( FATAL_ERROR "The installed libusb does not contain libusb_get_version(). libusb v1.0.10 is required, and >= v1.0.12 is recommended." )
+  endif ( NOT LIBUSB_HAVE_GET_VERSION )
+
+  # Windows users will most likely want the latest version or something close to it
+  if ( WIN32 )
+    # Introduced in 1.0.16
+    check_library_exists ( "${usb_LIBRARY}" libusb_strerror "" LIBUSB_HAVE_STRERROR )
+    message ( WARNING "Detected libusbx <1.0.16: For best results, please consider updating your libusb version." )
+  endif ( WIN32 )
+
+  # Provide a hook to check it hotplug support is provided
+  check_library_exists ( "${usb_LIBRARY}" libusb_hotplug_register_callback  "" LIBUSB_HAVE_HOTPLUG )
+
 else ()
-	message ( FATAL_ERROR "libusb-1.0 not found - is it installed? If you're using a binary distribution, try setting -DLIBUSB_PATH=<path_to_libusb_files>." )
+  message ( FATAL_ERROR "libusb-1.0 not found. If you're using a binary distribution, try setting -DLIBUSB_PATH=<path_to_libusb_files>." )
 endif ( LIBUSB_FOUND )
